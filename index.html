@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Distribution Visualization Zoo</title>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="./src/style.css" />
+  <style>
+  body {
+    font-family: Futura,sans-serif;
+  }
+  </style>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="http://vega.github.io/datalib/datalib.min.js"></script>
+  <script src="./src/vis.js"></script>
+</head>
+<body>
+  <div id="header">
+    <div id="instructions">
+      Click on the gray area to drop a sample and create a distribution.
+    </div>
+    <div id="dropper" >
+      <span id="cursor"></span>
+    </div>
+  </div>
+  <div id="vises">
+  </div>
+  <script>
+  setup();
+  </script>
+</body>
+</html>
