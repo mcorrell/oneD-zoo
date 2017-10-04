@@ -48,16 +48,14 @@ function gaussian(mu,sigma) {
 function bandwidthEstimate(dist) {
   var sigma = dl.stdev(dist);
 
-  //something suitably dirac-y when we've only got one value
+  //something suitably nice when we've only got one value
   if(sigma==0){
-    sigma = 0.01;
+    sigma = 1;
   }
 
   var n = dist.length;
   var silverman =  Math.pow((4*Math.pow(sigma,5)/(3*n)),0.2);
-  //our n is small here, so let's goose silverman's rule a little
-  //to make our kde look less smooth.
-  return silverman/5;
+  return silverman;
 }
 
 //Our density at a particular point, based on our kde
@@ -87,7 +85,7 @@ function setup() {
   vises.push(stripChart);
   vises.push(kdeChart);
   vises.push(gradient);
-  vises.push(bubble);
+  vises.push(violin);
   vises.push(beeswarm);
   vises.push(histogram);
   vises.push(boxWhisker);
@@ -244,7 +242,7 @@ histogram.update = function(){
       .transition()
       .attr("x",function(d) { return x(d.value);})
       .attr("y",function(d) { return by(d.count);})
-      .attr("width",function(d){ return width/bins.length;})
+      .attr("width",function(d){ return x(bins.bins.step);})
       .attr("height",function(d){ return y(0) - by(d.count);});
   }
 }
@@ -306,9 +304,6 @@ stripChart.update = function(){
   }
 }
 
-function Violin() {
-}
-
 function Horizon() {
 }
 
@@ -322,21 +317,26 @@ beeswarm.make = function(){
 
 beeswarm.update = function(){
   if(distribution.length>0){
+    var markSize = 7;
     var data = [];
     for(var i = 0;i<distribution.length;i++){
       data.push({"value": distribution[i]});
     }
 
+    y.clamp(true);
+    x.clamp(true);
     var simulation = d3.forceSimulation(data)
       .force("x", d3.forceX(function(d) { return x(d.value);}).strength(1))
       .force("y", d3.forceY(function(d) { return y(0.5);}))
-      .force("collide", d3.forceCollide(10))
+      .force("collide", d3.forceCollide(markSize+1))
       .stop();
 
     for(var i = 0;i<120;i++){
       simulation.tick();
     }
 
+    y.clamp(false);
+    x.clamp(false);
     var svg = d3.select("#beeswarm");
 
     svg.selectAll("circle").data(data).enter().append("circle");
@@ -345,7 +345,7 @@ beeswarm.update = function(){
       .transition()
       .attr("cx",function(d){ console.log(d.x); return d.x;})
       .attr("cy",function(d){ return d.y;})
-      .attr("r","7px")
+      .attr("r",markSize+"px")
       .attr("fill",tableauGray);
   }
 }
@@ -441,45 +441,86 @@ meanError.update = function(){
   }
 }
 
-var bubble = {};
+var violin = {};
 
-bubble.make = function(){
+violin.make = function(){
   var div = d3.select("#vises").append("div");
-  div.append("div").classed("title",true).html("Bubble Chart");
-  var svg = div.append("svg").attr("id","bubble");
-  var xs = dl.range(0,1,epsilon*25);
-  var data = [];
-  for(var i = 0;i<xs.length;i++){
-    data.push({"x": xs[i], "y" : 0});
-  }
+  div.append("div").classed("title",true).html("Violin Chart");
+  var svg = div.append("svg").attr("id","violin");
 
-  var cwidth = (width/data.length);
+  svg.append("path")
+  .attr("fill",tableauGray)
+  .classed("top",true);
 
-  svg.selectAll("circle").data(data).enter().append("circle")
-    .attr("cx",function(d,i){ return x(d.x);})
-    .attr("cy",function(d){ return y(0.5);})
-    .attr("r",0)
-    .attr("fill","tableauGray")
-    .attr("opacity",0.6)
-    .attr("stroke-width",0);
+  svg.append("path")
+  .attr("fill",tableauGray)
+  .classed("bottom",true);
+
+  svg.append("rect")
+  .classed("left",true)
+  .attr("x",function(d){ return x(0.5);})
+  .attr("y",function(d){ return y(0.5)-5;})
+  .attr("width", 0)
+  .attr("height", "10px")
+  .style("fill","white")
+  .style("stroke",tableauGray)
+  .style("stroke-width",4);
+
+  svg.append("rect")
+  .classed("right",true)
+  .attr("x",function(d){ return x(0.5);})
+  .attr("y",function(d){ return y(0.5)-5;})
+  .attr("width", 0)
+  .attr("height", "10px")
+  .style("fill","white")
+  .style("stroke",tableauGray)
+  .style("stroke-width",4);
+
+
 }
 
-bubble.update = function(){
+violin.update = function(){
   if(distribution.length>0){
-    var xs = dl.range(0,1,epsilon*25);
+    var xs = dl.range(0,1,epsilon);
     var data = [];
     for(var i = 0;i<xs.length;i++){
       data.push({"x": xs[i], "y" : density(xs[i])});
     }
 
-    var svg = d3.select("#bubble");
-    var by = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([0,y(0.5)-y(1)]);
+    var Ty = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([50,4]);
 
-    svg.selectAll("circle").data(data);
+    var TArea = d3.area()
+      .x(function(d){ return x(d.x);})
+      .y1(function(d){ return Ty(d.y);})
+      .y0(50);
 
-    svg.selectAll("circle")
-      .attr("cx",function(d,i){ return Math.floor(x(d.x));})
+    var By = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([50,96]);
+
+    var BArea = d3.area()
+      .x(function(d){ return x(d.x);})
+      .y1(function(d){ return By(d.y);})
+      .y0(50);
+
+    var svg = d3.select("#violin");
+    svg.select("path.top").datum(data)
       .transition()
-      .attr("r",function(d){ return by(d.y);});
+      .attr("d",TArea);
+
+    svg.select("path.bottom").datum(data)
+      .transition()
+      .attr("d",BArea);
+
+    var qs = dl.quartile(distribution);
+
+    svg.select("rect.left")
+      .transition()
+      .attr("width", function(d){ return x(qs[1] - qs[0]);})
+      .attr("x",function(d){ return x(qs[0]);});
+
+    svg.select("rect.right")
+      .transition()
+      .attr("x",function(d){ return x(qs[1]);})
+      .attr("width", function(d){ return x(qs[2] - qs[1]);});
+
   }
 }
