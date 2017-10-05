@@ -9,7 +9,7 @@
 // Wheat plot
 // Stem/leaf
 // Lasagna plot
-// Bubble chart
+// Dot plot
 
 //Let's make a distribution. Metaphor here is dropping samples into a space.
 //This distribution should be convex. We'll only be allowing drops in [0,1],
@@ -83,6 +83,7 @@ function setup() {
   window.addEventListener("resize",resize);
   resize();
   vises.push(stripChart);
+  vises.push(dotplot);
   vises.push(kdeChart);
   vises.push(gradient);
   vises.push(violin);
@@ -93,6 +94,29 @@ function setup() {
   for(var vis of vises){
     vis.make();
   }
+}
+
+//Wilkinson linear sweep for dot plots
+
+function dotPlotBin(data,markSize) {
+  var bins = [];
+  var curx = x(0);
+  var curIndex = -1;
+  var dX;
+  for(var i = 0;i<data.length;i++){
+    dX = x(data[i]);
+    if(i==0 || dX>curx+markSize){
+      curIndex++;
+      bins[curIndex] = {"value": data[i], "count": 1, "sum" : data[i]};
+    }
+    else{
+      bins[curIndex].count++;
+      bins[curIndex].sum+= data[i];
+      bins[curIndex].value = bins[curIndex].sum / bins[curIndex].count;
+    }
+    curx = x(bins[curIndex].value);
+  }
+  return bins;
 }
 
 function drop() {
@@ -233,17 +257,24 @@ histogram.update = function(){
     var by = d3.scaleLinear().domain([0,dl.max(bins,"count")]).range([100,4]);
 
     svg = d3.select("#histogram");
-    svg.selectAll("rect").data(bins).enter().append("rect")
-    .attr("fill",tableauGray)
-    .attr("stroke",tableauGray)
-    .attr("stroke-width",0);
+    var bars = svg.selectAll("rect").data(bins,function(d){ return d.value});
 
-    svg.selectAll("rect")
-      .transition()
-      .attr("x",function(d) { return x(d.value);})
-      .attr("y",function(d) { return by(d.count);})
-      .attr("width",function(d){ return x(bins.bins.step);})
-      .attr("height",function(d){ return y(0) - by(d.count);});
+    bars.exit().remove();
+
+    bars
+    .transition()
+    .attr("x",function(d) { return x(d.value);})
+    .attr("y",function(d) { return by(d.count);})
+    .attr("width",function(d){ return x(bins.bins.step);})
+    .attr("height",function(d){ return y(0) - by(d.count);});
+
+    bars.enter().append("rect")
+    .attr("x",function(d) { return x(d.value);})
+    .attr("y",function(d) { return by(d.count);})
+    .attr("width",function(d){ return x(bins.bins.step);})
+    .attr("height",function(d){ return y(0) - by(d.count);})
+    .attr("fill",tableauGray);
+
   }
 }
 
@@ -294,13 +325,14 @@ stripChart.update = function(){
   if(distribution.length>0){
     var svg = d3.select("#strip");
     svg.selectAll("rect").data(distribution).enter().append("rect")
-      .transition()
-      .attr("x",function(d){ return x(d);})
-      .attr("y",function(d){ return y(1);})
-      .attr("width",4)
-      .attr("height",function(d){ return y(0)-y(1);})
       .attr("opacity",0.7)
-      .attr("fill",tableauGray);
+      .attr("fill",tableauGray)
+      .attr("width",4)
+      .attr("height",100)
+      .attr("y",0);
+
+    svg.selectAll("rect")
+      .attr("x",function(d){ return x(d);});
   }
 }
 
@@ -317,7 +349,7 @@ beeswarm.make = function(){
 
 beeswarm.update = function(){
   if(distribution.length>0){
-    var markSize = 7;
+    var markSize = parseInt(d3.select("#dotplot").select("circle").attr("r"));
     var data = [];
     for(var i = 0;i<distribution.length;i++){
       data.push({"value": distribution[i]});
@@ -350,7 +382,60 @@ beeswarm.update = function(){
   }
 }
 
-function StemLeaf() {
+var dotplot = {};
+
+dotplot.make = function(){
+  var div = d3.select("#vises").append("div");
+  div.append("div").classed("title",true).html("Dot Plot");
+  var svg = div.append("svg").attr("id","dotplot");
+}
+
+dotplot.update = function(){
+  if(distribution.length>0){
+    var markSize = 15;
+    var bins;
+    var maxD;
+    var fits;
+    var data = distribution.sort();
+    do{
+      markSize--;
+      bins = dotPlotBin(data,markSize);
+      maxD = dl.max(bins,"count");
+      fits = maxD*(2*markSize) <=100;
+    }while(!fits && markSize>=3);
+
+    var svg = d3.select("#dotplot");
+
+    svg.selectAll("g").data(bins).enter().append("g");
+
+    svg.selectAll("g")
+      .transition()
+      .attr("transform",function(d){ return "translate("+x(d.value)+")";});
+
+    var dots = svg.selectAll("g").selectAll("circle").data(function(d,i){
+      var data = [];
+      for(var j=1;j<=d.count;j++){
+        data.push({"bin": i, "row": j});
+      }
+      return data;
+    }, function(d){ return d.bin+","+d.row;});
+
+    dots.exit().remove();
+
+    dots
+      .attr("cx",0)
+      .attr("cy",function(d){ return 100-((d.row)*(2*markSize));})
+      .attr("r",markSize+"px")
+      .attr("fill",tableauGray);
+
+    dots.enter().append("circle")
+      .attr("cx",0)
+      .attr("cy",function(d){ return 100-((d.row)*(2*markSize));})
+      .attr("r",markSize+"px")
+      .attr("fill",tableauGray);
+
+
+  }
 }
 
 var gradient = {};
