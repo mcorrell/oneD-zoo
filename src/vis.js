@@ -233,12 +233,12 @@ boxWhisker.update = function() {
 
     svg.select("line.left")
       .transition()
-      .attr("x1",function(d){ return x(qs[1]-(1.5*iqr));})
+      .attr("x1",function(d){ return x(qs[0]-(1.5*iqr));})
       .attr("x2",function(d){ return x(qs[0]);});
 
     svg.select("line.right")
       .transition()
-      .attr("x1",function(d){ return x(qs[1]+(1.5*iqr));})
+      .attr("x1",function(d){ return x(qs[2]+(1.5*iqr));})
       .attr("x2",function(d){ return x(qs[2]);});
   }
 }
