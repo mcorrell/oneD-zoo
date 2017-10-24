@@ -84,13 +84,15 @@ function setup() {
   resize();
   vises.push(stripChart);
   vises.push(dotplot);
+  vises.push(beeswarm);
+  vises.push(boxWhisker);
+  vises.push(meanError);
+  vises.push(histogram);
   vises.push(kdeChart);
   vises.push(gradient);
   vises.push(violin);
-  vises.push(beeswarm);
-  vises.push(histogram);
-  vises.push(boxWhisker);
-  vises.push(meanError);
+
+
   for(var vis of vises){
     vis.make();
   }
