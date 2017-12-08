@@ -23,7 +23,9 @@ var epsilon = 0.001;
 
 var vises = [];
 var width,x;
-var y = d3.scaleLinear().domain([0,1]).range([100,0]);
+
+var height = 100;
+var y = d3.scaleLinear().domain([0,1]).range([height,0]);
 
 
 /*
@@ -109,7 +111,7 @@ function dotPlotBin(data,markSize) {
   var dX;
   for(var i = 0;i<data.length;i++){
     dX = x(data[i]);
-    if(i==0 || dX>curx+markSize){
+    if(i==0 || dX>curx+(2*markSize)){
       curIndex++;
       bins[curIndex] = {"value": data[i], "count": 1, "sum" : data[i]};
     }
@@ -157,13 +159,13 @@ function resize() {
     vis.update();
   }
 
-  var height = window.innerHeight
+  var wheight = window.innerHeight
    || document.documentElement.clientHeight
    || document.body.clientHeight;
 
   var margin = d3.select("#header").node().getBoundingClientRect().height;
   d3.select("#vises")
-   .style("max-height",(height-margin-10)+"px")
+   .style("max-height",(wheight-margin-10)+"px")
    .style("margin-top",(margin+10)+"px");
 
 }
@@ -258,7 +260,7 @@ histogram.make = function(){
 histogram.update = function(){
   if(distribution.length>0){
     var bins = dl.histogram(distribution,{step: 1/binEstimate(distribution)});
-    var by = d3.scaleLinear().domain([0,dl.max(bins,"count")]).range([100,4]);
+    var by = d3.scaleLinear().domain([0,dl.max(bins,"count")]).range([height,4]);
 
     svg = d3.select("#histogram");
     var bars = svg.selectAll("rect").data(bins,function(d){ return d.value});
@@ -270,13 +272,13 @@ histogram.update = function(){
     .attr("x",function(d) { return x(d.value);})
     .attr("y",function(d) { return by(d.count);})
     .attr("width",function(d){ return x(bins.bins.step);})
-    .attr("height",function(d){ return y(0) - by(d.count);});
+    .attr("height",function(d){ return height - by(d.count);});
 
     bars.enter().append("rect")
     .attr("x",function(d) { return x(d.value);})
     .attr("y",function(d) { return by(d.count);})
     .attr("width",function(d){ return x(bins.bins.step);})
-    .attr("height",function(d){ return y(0) - by(d.count);})
+    .attr("height",function(d){ return height - by(d.count);})
     .attr("fill",tableauGray);
 
   }
@@ -304,7 +306,7 @@ kdeChart.update = function(){
     for(var i = 0;i<xs.length;i++){
       data.push({"x": xs[i], "y" : density(xs[i])});
     }
-    var by = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([100,4]);
+    var by = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([height,4]);
 
     var area = d3.area()
       .x(function(d){ return x(d.x);})
@@ -332,7 +334,7 @@ stripChart.update = function(){
       .attr("opacity",0.7)
       .attr("fill",tableauGray)
       .attr("width",4)
-      .attr("height",100)
+      .attr("height",height)
       .attr("y",0);
 
     svg.selectAll("rect")
@@ -405,7 +407,7 @@ dotplot.update = function(){
       markSize--;
       bins = dotPlotBin(data,markSize);
       maxD = dl.max(bins,"count");
-      fits = maxD*(2*markSize) <=100;
+      fits = maxD*(2*markSize) <= height;
     }while(!fits && markSize>=3);
 
     var svg = d3.select("#dotplot");
@@ -428,13 +430,13 @@ dotplot.update = function(){
 
     dots
       .attr("cx",0)
-      .attr("cy",function(d){ return 100-((d.row)*(2*markSize));})
+      .attr("cy",function(d){ return height-((d.row)*(2*markSize)) + markSize;})
       .attr("r",markSize+"px")
       .attr("fill",tableauGray);
 
     dots.enter().append("circle")
       .attr("cx",0)
-      .attr("cy",function(d){ return 100-((d.row)*(2*markSize));})
+      .attr("cy",function(d){ return height-((d.row)*(2*markSize)) + markSize;})
       .attr("r",markSize+"px")
       .attr("fill",tableauGray);
 
@@ -458,9 +460,9 @@ gradient.make = function(){
 
   svg.selectAll("rect").data(data).enter().append("rect")
     .attr("x",function(d,i){ return Math.floor(x(d.x));})
-    .attr("y",function(d){ return y(1);})
+    .attr("y",function(d){ return 0;})
     .attr("width",function(d){ return Math.ceil(cwidth);})
-    .attr("height",function(d){ return y(0)-y(1);})
+    .attr("height",function(d){ return height;})
     .attr("fill","white")
     .attr("stroke-width",0);
 }
@@ -506,16 +508,16 @@ twoTone.make = function(){
   bins.append("rect")
     .datum(function(d){ return d;})
     .attr("x",function(d,i){ return Math.floor(x(d.x));})
-    .attr("y",function(d){ return y(1);})
+    .attr("y",function(d){ return 0;})
     .attr("width",function(d){ return Math.ceil(cwidth);})
-    .attr("height",function(d){ return y(0)-y(1);})
+    .attr("height",function(d){ return height;})
     .attr("fill","white")
     .attr("stroke-width",0);
 
   bins.append("rect")
     .datum(function(d){ return d;})
     .attr("x",function(d,i){ return Math.floor(x(d.x));})
-    .attr("y",function(d){ return y(1);})
+    .attr("y",function(d){ return 0;})
     .attr("width",function(d){ return Math.ceil(cwidth);})
     .attr("height",function(d){ 0;})
     .attr("fill","white")
@@ -553,15 +555,13 @@ twoTone.update = function(){
       c1 = by(intVal);
       c2 = by(Math.min((quantize(val)+1),bands)/bands);
 
-      h = y(0)-y(1);
-
-      topH = h*hy(remain);
-      botH = h - topH;
+      topH = height*hy(remain);
+      botH = height - topH;
 
       top
         .attr("x",function(d,i){ return Math.floor(x(d.x));})
         .attr("width",function(d){ return Math.ceil(cwidth);})
-        .attr("y",function(d){ return y(0)-topH;})
+        .attr("y",function(d){ return botH;})
         .attr("height",function(d){ return topH; })
         .attr("fill",function(d){ return c2;});
 
