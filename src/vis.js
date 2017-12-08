@@ -10,6 +10,7 @@
 // Stem/leaf
 // Lasagna plot
 // Dot plot
+// Two-tone pseudo-coloring/horizon chart
 
 //Let's make a distribution. Metaphor here is dropping samples into a space.
 //This distribution should be convex. We'll only be allowing drops in [0,1],
@@ -90,6 +91,7 @@ function setup() {
   vises.push(histogram);
   vises.push(kdeChart);
   vises.push(gradient);
+  vises.push(twoTone);
   vises.push(violin);
 
 
@@ -377,7 +379,7 @@ beeswarm.update = function(){
 
     svg.selectAll("circle")
       .transition()
-      .attr("cx",function(d){ console.log(d.x); return d.x;})
+      .attr("cx",function(d){ return d.x;})
       .attr("cy",function(d){ return d.y;})
       .attr("r",markSize+"px")
       .attr("fill",tableauGray);
@@ -482,6 +484,96 @@ gradient.update = function(){
       .attr("width",function(d){ return Math.ceil(cwidth);})
       .transition()
       .attr("fill",function(d){ return by(d.y);});
+  }
+}
+
+var twoTone = {};
+
+twoTone.make = function(){
+  var div = d3.select("#vises").append("div");
+  div.append("div").classed("title",true).html("Horizon Chart");
+  var svg = div.append("svg").attr("id","twotone");
+  var xs = dl.range(0,1,epsilon);
+  var data = [];
+  for(var i = 0;i<xs.length;i++){
+    data.push({"x": xs[i], "y" : 0});
+  }
+
+  var cwidth = (width/data.length);
+
+  var bins = svg.selectAll("rect").data(data).enter().append("g");
+
+  bins.append("rect")
+    .datum(function(d){ return d;})
+    .attr("x",function(d,i){ return Math.floor(x(d.x));})
+    .attr("y",function(d){ return y(1);})
+    .attr("width",function(d){ return Math.ceil(cwidth);})
+    .attr("height",function(d){ return y(0)-y(1);})
+    .attr("fill","white")
+    .attr("stroke-width",0);
+
+  bins.append("rect")
+    .datum(function(d){ return d;})
+    .attr("x",function(d,i){ return Math.floor(x(d.x));})
+    .attr("y",function(d){ return y(1);})
+    .attr("width",function(d){ return Math.ceil(cwidth);})
+    .attr("height",function(d){ 0;})
+    .attr("fill","white")
+    .attr("stroke-width",0);
+}
+
+twoTone.update = function(){
+  if(distribution.length>0){
+    var bands = 5;
+
+    var xs = dl.range(0,1,epsilon);
+    var data = [];
+    for(var i = 0;i<xs.length;i++){
+      data.push({"x": xs[i], "y" : density(xs[i])});
+    }
+
+    var squash = d3.scaleLinear().domain([0,dl.max(data,"y")]);
+    var quantize = d3.scaleQuantize().domain([0,1]).range(dl.range(0,bands,1));
+    var hy = d3.scaleLinear().domain([0,1/bands]).range([0,1]);
+    var by = d3.scaleLinear().domain([0,1]).range(["white",tableauGray]);
+
+    var svg = d3.select("#twotone");
+    var cwidth = (width/data.length);
+
+    var c1,c2,val,intVal,remain,h,topH,botH;
+
+    svg.selectAll("g").data(data).each(function (d,i){
+      val = squash(d.y);
+      intVal = quantize(val)/bands;
+      d3.select(this).selectAll("rect").datum(d);
+      var top = d3.select(this.firstChild);
+      var bottom = d3.select(this.lastChild);
+
+      remain = Math.max(val - intVal,0);
+      c1 = by(intVal);
+      c2 = by(Math.min((quantize(val)+1),bands)/bands);
+
+      h = y(0)-y(1);
+
+      topH = h*hy(remain);
+      botH = h - topH;
+
+      top
+        .attr("x",function(d,i){ return Math.floor(x(d.x));})
+        .attr("width",function(d){ return Math.ceil(cwidth);})
+        .attr("y",function(d){ return y(0)-topH;})
+        .attr("height",function(d){ return topH; })
+        .attr("fill",function(d){ return c2;});
+
+      bottom
+        .attr("x",function(d,i){ return Math.floor(x(d.x));})
+        .attr("width",function(d){ return Math.ceil(cwidth);})
+        .attr("y",function(d){ return 0;})
+        .attr("height",function(d){ return botH;})
+        .attr("fill",function(d){ return c1;});
+
+    });
+
   }
 }
 
