@@ -165,7 +165,7 @@ function resize() {
 
   var margin = d3.select("#header").node().getBoundingClientRect().height;
   d3.select("#vises")
-   .style("max-height",(wheight-margin-10)+"px")
+   .style("max-height",(wheight-margin-20)+"px")
    .style("margin-top",(margin+10)+"px");
 
 }
@@ -269,15 +269,15 @@ histogram.update = function(){
 
     bars
     .transition()
-    .attr("x",function(d) { return x(d.value);})
+    .attr("x",function(d) { return Math.floor(x(d.value));})
     .attr("y",function(d) { return by(d.count);})
-    .attr("width",function(d){ return x(bins.bins.step);})
+    .attr("width",function(d){ return Math.ceil(x(bins.bins.step));})
     .attr("height",function(d){ return height - by(d.count);});
 
     bars.enter().append("rect")
-    .attr("x",function(d) { return x(d.value);})
+    .attr("x",function(d) { return Math.floor(x(d.value));})
     .attr("y",function(d) { return by(d.count);})
-    .attr("width",function(d){ return x(bins.bins.step);})
+    .attr("width",function(d){ return Math.ceil(x(bins.bins.step));})
     .attr("height",function(d){ return height - by(d.count);})
     .attr("fill",tableauGray);
 
@@ -555,7 +555,7 @@ twoTone.update = function(){
       c1 = by(intVal);
       c2 = by(Math.min((quantize(val)+1),bands)/bands);
 
-      topH = height*hy(remain);
+      topH = Math.round(height*hy(remain));
       botH = height - topH;
 
       top
