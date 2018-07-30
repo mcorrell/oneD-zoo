@@ -135,17 +135,22 @@ function drop() {
       .duration(duration)
         .style("opacity",0);
     var x = coords[0]/width;
-    distribution.push(x);
-    var sigma = bandwidthEstimate(distribution);
-    kde.push(gaussian(x,sigma));
-    for(var gauss of kde){
-        gauss.sigma = sigma;
-    }
-
-    for(var vis of vises){
-      vis.update();
-    }
+    addPoint(x);
     setTimeout(function(){ dropping = false;}, duration);
+  }
+}
+
+function addPoint(x){
+  x = Math.min(Math.max(x,0),1);
+  distribution.push(x);
+  var sigma = bandwidthEstimate(distribution);
+  kde.push(gaussian(x,sigma));
+  for(var gauss of kde){
+    gauss.sigma = sigma;
+  }
+
+  for(var vis of vises){
+    vis.update();
   }
 }
 
