@@ -1,16 +1,15 @@
 //TODO Add examples for the following graph types:
-// KDE
-// Histogram
-// Box plot
-// Mean + error
-// Violin plot
-// Horizon chart
-// Beeswarm
-// Wheat plot
+// X KDE
+// X Histogram
+// X Box plot
+// X Mean + error
+// X Violin plot
+// X Beeswarm
 // Stem/leaf
-// Lasagna plot
-// Dot plot
-// Two-tone pseudo-coloring/horizon chart
+// X Dot plot
+// X Two-tone pseudo-coloring/horizon chart
+// Letter-value plot?
+// Wheat plot?
 
 //Let's make a distribution. Metaphor here is dropping samples into a space.
 //This distribution should be convex. We'll only be allowing drops in [0,1],
@@ -71,7 +70,6 @@ function density(x) {
 }
 
 //Sturges' rule of thumb for histogram bin size selection.
-
 function binEstimate(dist) {
   var n = dist.length;
   return Math.ceil(Math.log2(n))+1;
@@ -183,20 +181,20 @@ boxWhisker.make = function() {
 
   svg.append("rect")
   .classed("left",true)
-  .attr("x",function(d){ return x(0.5);})
-  .attr("y",function(d){ return y(0.75);})
-  .attr("width", function(d){ return 0;})
-  .attr("height", function(d){ return y(0.5);})
+  .attr("x",x(0.5))
+  .attr("y",y(0.75))
+  .attr("width",0)
+  .attr("height",y(0.5))
   .style("fill","white")
   .style("stroke",tableauGray)
   .style("stroke-width",4);
 
   svg.append("rect")
   .classed("right",true)
-  .attr("x",function(d){ return x(0.5);})
-  .attr("y",function(d){ return y(0.75);})
-  .attr("width", function(d){ return 0;})
-  .attr("height", function(d){ return y(0.5);})
+  .attr("x",x(0.5))
+  .attr("y",y(0.75))
+  .attr("width",0)
+  .attr("height",y(0.5))
   .style("fill","white")
   .style("stroke",tableauGray)
   .style("stroke-width",4);
@@ -212,10 +210,10 @@ boxWhisker.make = function() {
 
   svg.append("line")
   .classed("right",true)
-  .attr("x1",function(d){ return x(0.5);})
-  .attr("y1",function(d){ return y(0.5);})
-  .attr("x2",function(d){ return x(0.5);})
-  .attr("y2",function(d){ return y(0.5);})
+  .attr("x1",x(0.5))
+  .attr("y1",y(0.5))
+  .attr("x2",x(0.5))
+  .attr("y2",y(0.5))
   .style("stroke",tableauGray)
   .style("stroke-width",4);
 }
@@ -229,23 +227,23 @@ boxWhisker.update = function() {
 
     svg.select("rect.left")
       .transition()
-      .attr("width", function(d){ return x(qs[1] - qs[0]);})
-      .attr("x",function(d){ return x(qs[0]);});
+      .attr("width",x(qs[1] - qs[0]))
+      .attr("x",x(qs[0]));
 
     svg.select("rect.right")
       .transition()
-      .attr("x",function(d){ return x(qs[1]);})
-      .attr("width", function(d){ return x(qs[2] - qs[1]);});
+      .attr("x",x(qs[1]))
+      .attr("width",x(qs[2] - qs[1]));
 
     svg.select("line.left")
       .transition()
-      .attr("x1",function(d){ return x(qs[0]-(1.5*iqr));})
-      .attr("x2",function(d){ return x(qs[0]);});
+      .attr("x1",x(qs[0]-(1.5*iqr)))
+      .attr("x2",x(qs[0]));
 
     svg.select("line.right")
       .transition()
-      .attr("x1",function(d){ return x(qs[2]+(1.5*iqr));})
-      .attr("x2",function(d){ return x(qs[2]);});
+      .attr("x1",x(qs[2]+(1.5*iqr)))
+      .attr("x2",x(qs[2]));
   }
 }
 
@@ -263,22 +261,22 @@ histogram.update = function(){
     var by = d3.scaleLinear().domain([0,dl.max(bins,"count")]).range([height,4]);
 
     svg = d3.select("#histogram");
-    var bars = svg.selectAll("rect").data(bins,function(d){ return d.value});
+    var bars = svg.selectAll("rect").data(bins,d => d.value);
 
     bars.exit().remove();
 
     bars
     .transition()
-    .attr("x",function(d) { return Math.floor(x(d.value));})
-    .attr("y",function(d) { return by(d.count);})
-    .attr("width",function(d){ return Math.ceil(x(bins.bins.step));})
-    .attr("height",function(d){ return height - by(d.count);});
+    .attr("x",d => Math.floor(x(d.value)))
+    .attr("y",d => by(d.count))
+    .attr("width",Math.ceil(x(bins.bins.step)))
+    .attr("height",d => height - by(d.count));
 
     bars.enter().append("rect")
-    .attr("x",function(d) { return Math.floor(x(d.value));})
-    .attr("y",function(d) { return by(d.count);})
-    .attr("width",function(d){ return Math.ceil(x(bins.bins.step));})
-    .attr("height",function(d){ return height - by(d.count);})
+    .attr("x",d => Math.floor(x(d.value)))
+    .attr("y",d => by(d.count))
+    .attr("width",Math.ceil(x(bins.bins.step)))
+    .attr("height",d => height - by(d.count))
     .attr("fill",tableauGray);
 
   }
@@ -302,15 +300,12 @@ kdeChart.make = function(){
 kdeChart.update = function(){
   if(distribution.length>0){
     var xs = dl.range(0,1,epsilon);
-    var data = [];
-    for(var i = 0;i<xs.length;i++){
-      data.push({"x": xs[i], "y" : density(xs[i])});
-    }
+    var data = xs.map(d => ({"x": d, "y": density(d)}));
     var by = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([height,4]);
 
     var area = d3.area()
-      .x(function(d){ return x(d.x);})
-      .y(function(d){ return by(d.y);});
+      .x(d => x(d.x))
+      .y(d => by(d.y));
 
     var svg = d3.select("#density");
     svg.select("path.density").datum(data)
@@ -338,11 +333,8 @@ stripChart.update = function(){
       .attr("y",0);
 
     svg.selectAll("rect")
-      .attr("x",function(d){ return x(d);});
+      .attr("x",d => x(d));
   }
-}
-
-function Horizon() {
 }
 
 var beeswarm = {};
@@ -356,16 +348,13 @@ beeswarm.make = function(){
 beeswarm.update = function(){
   if(distribution.length>0){
     var markSize = parseInt(d3.select("#dotplot").select("circle").attr("r"));
-    var data = [];
-    for(var i = 0;i<distribution.length;i++){
-      data.push({"value": distribution[i]});
-    }
+    var data = distribution.map(d => ({"value": d}));
 
     y.clamp(true);
     x.clamp(true);
     var simulation = d3.forceSimulation(data)
-      .force("x", d3.forceX(function(d) { return x(d.value);}).strength(1))
-      .force("y", d3.forceY(function(d) { return y(0.5);}))
+      .force("x", d3.forceX(d => x(d.value)).strength(1))
+      .force("y", d3.forceY(y(0.5)))
       .force("collide", d3.forceCollide(markSize+1))
       .stop();
 
@@ -381,8 +370,8 @@ beeswarm.update = function(){
 
     svg.selectAll("circle")
       .transition()
-      .attr("cx",function(d){ return d.x;})
-      .attr("cy",function(d){ return d.y;})
+      .attr("cx",d => d.x)
+      .attr("cy",d => d.y)
       .attr("r",markSize+"px")
       .attr("fill",tableauGray);
   }
@@ -416,7 +405,7 @@ dotplot.update = function(){
 
     svg.selectAll("g")
       .transition()
-      .attr("transform",function(d){ return "translate("+x(d.value)+")";});
+      .attr("transform",d => "translate("+x(d.value)+")");
 
     var dots = svg.selectAll("g").selectAll("circle").data(function(d,i){
       var data = [];
@@ -424,19 +413,19 @@ dotplot.update = function(){
         data.push({"bin": i, "row": j});
       }
       return data;
-    }, function(d){ return d.bin+","+d.row;});
+    }, d => d.bin+","+d.row);
 
     dots.exit().remove();
 
     dots
       .attr("cx",0)
-      .attr("cy",function(d){ return height-((d.row)*(2*markSize)) + markSize;})
+      .attr("cy",d => height-((d.row)*(2*markSize)) + markSize)
       .attr("r",markSize+"px")
       .attr("fill",tableauGray);
 
     dots.enter().append("circle")
       .attr("cx",0)
-      .attr("cy",function(d){ return height-((d.row)*(2*markSize)) + markSize;})
+      .attr("cy",d => height-((d.row)*(2*markSize)) + markSize)
       .attr("r",markSize+"px")
       .attr("fill",tableauGray);
 
@@ -451,18 +440,15 @@ gradient.make = function(){
   div.append("div").classed("title",true).html("Gradient Chart");
   var svg = div.append("svg").attr("id","gradient");
   var xs = dl.range(0,1,epsilon);
-  var data = [];
-  for(var i = 0;i<xs.length;i++){
-    data.push({"x": xs[i], "y" : 0});
-  }
+  var data = xs.map(d => ({"x": d, "y": 0}));
 
   var cwidth = (width/data.length);
 
   svg.selectAll("rect").data(data).enter().append("rect")
-    .attr("x",function(d,i){ return Math.floor(x(d.x));})
-    .attr("y",function(d){ return 0;})
-    .attr("width",function(d){ return Math.ceil(cwidth);})
-    .attr("height",function(d){ return height;})
+    .attr("x",d => Math.floor(x(d.x)))
+    .attr("y",0)
+    .attr("width",Math.ceil(cwidth))
+    .attr("height",height)
     .attr("fill","white")
     .attr("stroke-width",0);
 }
@@ -470,10 +456,7 @@ gradient.make = function(){
 gradient.update = function(){
   if(distribution.length>0){
     var xs = dl.range(0,1,epsilon);
-    var data = [];
-    for(var i = 0;i<xs.length;i++){
-      data.push({"x": xs[i], "y" : density(xs[i])});
-    }
+    var data = xs.map(d => ({"x": d, "y": density(d)}));
 
     var svg = d3.select("#gradient");
     var cwidth = (width/data.length);
@@ -482,10 +465,10 @@ gradient.update = function(){
     svg.selectAll("rect").data(data);
 
     svg.selectAll("rect")
-      .attr("x",function(d,i){ return Math.floor(x(d.x));})
-      .attr("width",function(d){ return Math.ceil(cwidth);})
+      .attr("x",d => Math.floor(x(d.x)))
+      .attr("width",Math.ceil(cwidth))
       .transition()
-      .attr("fill",function(d){ return by(d.y);});
+      .attr("fill",d => by(d.y));
   }
 }
 
@@ -496,10 +479,7 @@ twoTone.make = function(){
   div.append("div").classed("title",true).html("Horizon Chart");
   var svg = div.append("svg").attr("id","twotone");
   var xs = dl.range(0,1,epsilon);
-  var data = [];
-  for(var i = 0;i<xs.length;i++){
-    data.push({"x": xs[i], "y" : 0});
-  }
+  var data = xs.map(d => ({"x": d, "y": 0}));
 
   var cwidth = (width/data.length);
 
@@ -515,11 +495,11 @@ twoTone.make = function(){
     .attr("stroke-width",0);
 
   bins.append("rect")
-    .datum(function(d){ return d;})
-    .attr("x",function(d,i){ return Math.floor(x(d.x));})
-    .attr("y",function(d){ return 0;})
-    .attr("width",function(d){ return Math.ceil(cwidth);})
-    .attr("height",function(d){ 0;})
+    .datum(d => d)
+    .attr("x",d => Math.floor(x(d.x)))
+    .attr("y",0)
+    .attr("width",Math.ceil(cwidth))
+    .attr("height",0)
     .attr("fill","white")
     .attr("stroke-width",0);
 }
@@ -529,10 +509,7 @@ twoTone.update = function(){
     var bands = 5;
 
     var xs = dl.range(0,1,epsilon);
-    var data = [];
-    for(var i = 0;i<xs.length;i++){
-      data.push({"x": xs[i], "y" : density(xs[i])});
-    }
+    var data = xs.map(d => ({"x": d, "y": density(d)}));
 
     var squash = d3.scaleLinear().domain([0,dl.max(data,"y")]);
     var quantize = d3.scaleQuantize().domain([0,1]).range(dl.range(0,bands,1));
@@ -559,18 +536,18 @@ twoTone.update = function(){
       botH = height - topH;
 
       top
-        .attr("x",function(d,i){ return Math.floor(x(d.x));})
-        .attr("width",function(d){ return Math.ceil(cwidth);})
-        .attr("y",function(d){ return botH;})
-        .attr("height",function(d){ return topH; })
-        .attr("fill",function(d){ return c2;});
+        .attr("x",d => Math.floor(x(d.x)))
+        .attr("width",Math.ceil(cwidth))
+        .attr("y",botH)
+        .attr("height",topH)
+        .attr("fill",c2);
 
       bottom
-        .attr("x",function(d,i){ return Math.floor(x(d.x));})
-        .attr("width",function(d){ return Math.ceil(cwidth);})
-        .attr("y",function(d){ return 0;})
-        .attr("height",function(d){ return botH;})
-        .attr("fill",function(d){ return c1;});
+        .attr("x",d => Math.floor(x(d.x)))
+        .attr("width",Math.ceil(cwidth))
+        .attr("y",0)
+        .attr("height",botH)
+        .attr("fill",c1);
 
     });
 
@@ -586,18 +563,18 @@ meanError.make = function(){
 
   svg.append("line")
     .classed("error",true)
-    .attr("x1",function(d){ return x(0.5);})
-    .attr("x2",function(d){ return x(0.5);})
-    .attr("y1",function(d){ return y(0.5);})
-    .attr("y2",function(d){ return y(0.5);})
+    .attr("x1",x(0.5))
+    .attr("x2",x(0.5))
+    .attr("y1",y(0.5))
+    .attr("y2",y(0.5))
     .attr("stroke",tableauGray)
     .attr("stroke-width",4);
 
   svg.append("circle")
     .classed("mean",true)
-    .attr("cx",function(d){ return -10;})
-    .attr("cy",function(d) { return y(0.5);})
-    .attr("r",function(d) { return y(0.5)-y(0.6);})
+    .attr("cx",-10)
+    .attr("cy",y(0.5))
+    .attr("r",y(0.5)-y(0.6))
     .attr("fill",tableauGray);
 
 }
@@ -611,12 +588,12 @@ meanError.update = function(){
 
     svg.select("line.error")
       .transition()
-      .attr("x1",function(d){ return x(error[0]);})
-      .attr("x2",function(d){ return x(error[1]);});
+      .attr("x1",x(error[0]))
+      .attr("x2",x(error[1]));
 
     svg.select("circle.mean")
       .transition()
-      .attr("cx",function(d){ return x(mean);});
+      .attr("cx",x(mean));
   }
 }
 
@@ -637,8 +614,8 @@ violin.make = function(){
 
   svg.append("rect")
   .classed("left",true)
-  .attr("x",function(d){ return x(0.5);})
-  .attr("y",function(d){ return y(0.5)-5;})
+  .attr("x",x(0.5))
+  .attr("y",y(0.5)-5)
   .attr("width", 0)
   .attr("height", "10px")
   .style("fill","white")
@@ -647,8 +624,8 @@ violin.make = function(){
 
   svg.append("rect")
   .classed("right",true)
-  .attr("x",function(d){ return x(0.5);})
-  .attr("y",function(d){ return y(0.5)-5;})
+  .attr("x",x(0.5))
+  .attr("y",y(0.5)-5)
   .attr("width", 0)
   .attr("height", "10px")
   .style("fill","white")
@@ -661,23 +638,20 @@ violin.make = function(){
 violin.update = function(){
   if(distribution.length>0){
     var xs = dl.range(0,1,epsilon);
-    var data = [];
-    for(var i = 0;i<xs.length;i++){
-      data.push({"x": xs[i], "y" : density(xs[i])});
-    }
+    var data = xs.map(d => ({"x": d, "y": density(d)}));
 
     var Ty = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([50,4]);
 
     var TArea = d3.area()
-      .x(function(d){ return x(d.x);})
-      .y1(function(d){ return Ty(d.y);})
+      .x(d => x(d.x))
+      .y1(d => Ty(d.y))
       .y0(50);
 
     var By = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([50,96]);
 
     var BArea = d3.area()
-      .x(function(d){ return x(d.x);})
-      .y1(function(d){ return By(d.y);})
+      .x(d => x(d.x))
+      .y1(d => By(d.y))
       .y0(50);
 
     var svg = d3.select("#violin");
@@ -693,13 +667,13 @@ violin.update = function(){
 
     svg.select("rect.left")
       .transition()
-      .attr("width", function(d){ return x(qs[1] - qs[0]);})
-      .attr("x",function(d){ return x(qs[0]);});
+      .attr("width",x(qs[1] - qs[0]))
+      .attr("x",x(qs[0]));
 
     svg.select("rect.right")
       .transition()
-      .attr("x",function(d){ return x(qs[1]);})
-      .attr("width", function(d){ return x(qs[2] - qs[1]);});
+      .attr("x",x(qs[1]))
+      .attr("width",x(qs[2] - qs[1]));
 
   }
 }
