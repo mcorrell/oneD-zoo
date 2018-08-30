@@ -23,9 +23,8 @@ var epsilon = 0.001;
 var vises = [];
 var width,x;
 
-var height = 100;
+var height = 50;
 var y = d3.scaleLinear().domain([0,1]).range([height,0]);
-
 
 /*
 Stats utility functions
@@ -80,6 +79,9 @@ var tableauOrange = "#e8762c";
 var tableauGray = "#333";
 
 function setup() {
+  d3.select("body").append("style")
+    .html("svg{ width: 100%; height: "+height+"px; }");
+
   d3.select("#dropper").on("click",drop);
   window.addEventListener("resize",resize);
   resize();
@@ -645,19 +647,19 @@ violin.update = function(){
     var xs = dl.range(0,1,epsilon);
     var data = xs.map(d => ({"x": d, "y": density(d)}));
 
-    var Ty = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([50,4]);
+    var Ty = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([height/2,4]);
 
     var TArea = d3.area()
       .x(d => x(d.x))
       .y1(d => Ty(d.y))
-      .y0(50);
+      .y0(height/2);
 
-    var By = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([50,96]);
+    var By = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([height/2,height-4]);
 
     var BArea = d3.area()
       .x(d => x(d.x))
       .y1(d => By(d.y))
-      .y0(50);
+      .y0(height/2);
 
     var svg = d3.select("#violin");
     svg.select("path.top").datum(data)
