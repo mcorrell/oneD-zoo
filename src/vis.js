@@ -177,8 +177,14 @@ function resize() {
 
 /*
 Chart drawing
+
+Each chart is an object that gets added to our array of vizzes.
+
+Each chart object needs a make() function that initializes it to some reasonable state for when there's no data, and an update() function that takes into account whatever data is in the distribution array.
 */
 
+
+//Box and Whisker Chart
 var boxWhisker = {};
 
 boxWhisker.make = function() {
@@ -254,6 +260,7 @@ boxWhisker.update = function() {
   }
 }
 
+//Histogram
 var histogram = {};
 
 histogram.make = function(){
@@ -289,6 +296,7 @@ histogram.update = function(){
   }
 }
 
+//Density Chart aka Kernel Density Estimate
 var kdeChart = {};
 
 kdeChart.make = function(){
@@ -321,6 +329,7 @@ kdeChart.update = function(){
   }
 }
 
+//Strip Chart where each sample is represented by a tall rectangular mark.
 var stripChart = {};
 
 stripChart.make = function(){
@@ -344,6 +353,7 @@ stripChart.update = function(){
   }
 }
 
+//Beeswarm chart where each sample is a dot that uses some layout algorithm (in this case a force-directed layout) to cluster together such that no dots overlap, but the dots are as close to their intended x positions as possible.
 var beeswarm = {};
 
 beeswarm.make = function(){
@@ -384,6 +394,7 @@ beeswarm.update = function(){
   }
 }
 
+//A Wilkinson Dot plot where each sample is a circle that, if it would overplot another circle, is instead stacked on top of it.
 var dotplot = {};
 
 dotplot.make = function(){
@@ -399,6 +410,7 @@ dotplot.update = function(){
     var maxD;
     var fits;
     var data = distribution.sort();
+    //Iteratively search for the largest mark size that would result in the points still "fitting" in our y region.
     do{
       markSize--;
       bins = dotPlotBin(data,markSize);
@@ -435,11 +447,10 @@ dotplot.update = function(){
       .attr("cy",d => height-((d.row)*(2*markSize)) + markSize)
       .attr("r",markSize+"px")
       .attr("fill",tableauGray);
-
-
   }
 }
 
+//A gradient chart where we encode density from our KDE as color.
 var gradient = {};
 
 gradient.make = function(){
@@ -479,6 +490,9 @@ gradient.update = function(){
   }
 }
 
+//A two-tone color chart aka a horizon chart.
+//Two ways of conceptualizing this one: either we have a banded color scheme where each x position has two colors, and the height of the second color is how far along the band that it is...
+//Or, the conceptually easier way, which is that we have a density chart, but we slice it into layers, color each layer darker and darker depending on its y value, and then stack all the slices on top of eachother.
 var twoTone = {};
 
 twoTone.make = function(){
@@ -555,12 +569,11 @@ twoTone.update = function(){
         .attr("y",0)
         .attr("height",botH)
         .attr("fill",c1);
-
     });
-
   }
 }
 
+//A dot for the mean, and error bars representing a 95% z-confidence interval of the mean.
 var meanError = {};
 
 meanError.make = function(){
@@ -583,7 +596,6 @@ meanError.make = function(){
     .attr("cy",y(0.5))
     .attr("r",y(0.5)-y(0.6))
     .attr("fill",tableauGray);
-
 }
 
 meanError.update = function(){
@@ -604,6 +616,7 @@ meanError.update = function(){
   }
 }
 
+//A violin chart, which is a symmetric density plot with a box plot inside of it.
 var violin = {};
 
 violin.make = function(){
@@ -638,8 +651,6 @@ violin.make = function(){
   .style("fill","white")
   .style("stroke",tableauGray)
   .style("stroke-width",4);
-
-
 }
 
 violin.update = function(){
@@ -681,6 +692,5 @@ violin.update = function(){
       .transition()
       .attr("x",x(qs[1]))
       .attr("width",x(qs[2] - qs[1]));
-
   }
 }
