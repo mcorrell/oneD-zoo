@@ -80,7 +80,7 @@ function binEstimate(dist) {
   return Math.ceil(Math.log2(n))+1;
 }
 
-var tableauBlue = "#1f447d";
+var tableauBlue = "#4e79a7";
 //var tableauOrange = "#e8762c";
 //var tableauGray = "#333";
 
