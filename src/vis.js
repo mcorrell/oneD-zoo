@@ -24,7 +24,7 @@ var vises = [];
 var width,x;
 
 var height = 50;
-var y = d3.scaleLinear().domain([0,1]).range([height,0]);
+var y = d3.scaleLinear().domain([0,1]).range([height, 0]);
 
 /*
 Stats utility functions
@@ -32,37 +32,43 @@ Stats utility functions
 
 
 //Gaussian kernel
-
-function gaussian(mu,sigma) {
+function gaussian(mu = 0.5, sigma = 1) {
   var gauss = {};
   gauss.mu = mu;
   gauss.sigma = sigma;
   gauss.pdf = function(x){
-    var exp = Math.exp(Math.pow(x-gauss.mu, 2) / (-2 * Math.pow(gauss.sigma, 2)));
+    var exp = Math.exp(Math.pow(x - gauss.mu, 2) / (-2 * Math.pow(gauss.sigma, 2)));
     return (1 / (gauss.sigma * Math.sqrt(2*Math.PI))) * exp;
   };
   return gauss;
 }
 
-//Silverman's rule of thumb for KDE bandwidth selection.
+//Initialize to non-empty if needed
+function defaultData(n = 50) {
+  const data = dl.random.normal(0.5, 0.25).samples(n);
+  data.forEach(function(d){
+    addPoint(d);
+  });
+}
 
+//Silverman's rule of thumb for KDE bandwidth selection.
 function bandwidthEstimate(dist) {
   var sigma = dl.stdev(dist);
 
   //something suitably nice when we've only got one value
-  if(sigma==0){
+  if(sigma == 0){
     sigma = 1;
   }
 
   var n = dist.length;
-  var silverman =  Math.pow((4*Math.pow(sigma,5)/(3*n)),0.2);
+  var silverman =  Math.pow((4 * Math.pow(sigma, 5) / (3 * n)), 0.2);
   return silverman;
 }
 
 //Our density at a particular point, based on our kde
 function density(x) {
   var y = 0;
-  for(var i = 0; i<kde.length; i++){
+  for(var i = 0; i < kde.length; i++) {
     y+= kde[i].pdf(x);
   }
   return y;
@@ -75,8 +81,10 @@ function binEstimate(dist) {
 }
 
 var tableauBlue = "#1f447d";
-var tableauOrange = "#e8762c";
-var tableauGray = "#333";
+//var tableauOrange = "#e8762c";
+//var tableauGray = "#333";
+
+var fillColor = tableauBlue;
 
 function setup() {
   d3.select("body").append("style")
@@ -104,14 +112,14 @@ function setup() {
 
 //Wilkinson linear sweep for dot plots
 
-function dotPlotBin(data,markSize) {
+function dotPlotBin(data, markSize) {
   var bins = [];
   var curx = x(0);
   var curIndex = -1;
   var dX;
-  for(var i = 0;i<data.length;i++){
+  for(var i = 0;i < data.length;i++){
     dX = x(data[i]);
-    if(i==0 || dX>curx+(2*markSize)){
+    if(i==0 || dX>curx + (2 * markSize)){
       curIndex++;
       bins[curIndex] = {"value": data[i], "count": 1, "sum" : data[i]};
     }
@@ -130,48 +138,46 @@ function drop() {
   if(!dropping) {
     dropping = true;
     var coords = d3.mouse(this);
-    d3.select("#cursor").style("opacity",1);
-    d3.select("#cursor").style("left",coords[0]+"px");
+    d3.select("#cursor").style("opacity", 1);
+    d3.select("#cursor").style("left", coords[0]+"px");
     d3.select("#cursor")
       .transition()
       .duration(duration)
         .style("opacity",0);
-    var x = coords[0]/width;
+    var x = coords[0] / width;
     addPoint(x);
     setTimeout(function(){ dropping = false;}, duration);
   }
 }
 
-function addPoint(x){
-  x = Math.min(Math.max(x,0),1);
+function addPoint(x) {
+  x = Math.min(Math.max(x, 0), 1);
   distribution.push(x);
   var sigma = bandwidthEstimate(distribution);
-  kde.push(gaussian(x,sigma));
+  kde.push(gaussian(x, sigma));
   for(var gauss of kde){
     gauss.sigma = sigma;
   }
 
-  for(var vis of vises){
+  for(var vis of vises) {
     vis.update();
   }
 }
 
 function resize() {
   width = parseInt(d3.select("#dropper").style("width"));
-  x = d3.scaleLinear().domain([0,1]).range([0,width]);
+  x = d3.scaleLinear().domain([0, 1]).range([0, width]);
 
-  for(var vis of vises){
+  for(var vis of vises) {
     vis.update();
   }
 
-  var wheight = window.innerHeight
-   || document.documentElement.clientHeight
-   || document.body.clientHeight;
+  var wheight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
 
   var margin = d3.select("#header").node().getBoundingClientRect().height;
   d3.select("#vises")
-   .style("max-height",(wheight-margin-20)+"px")
-   .style("margin-top",(margin+10)+"px");
+   .style("max-height",(wheight - margin - 20)+"px")
+   .style("margin-top",(margin + 10)+"px");
 
 }
 
@@ -190,133 +196,134 @@ var boxWhisker = {};
 boxWhisker.make = function() {
   var div = d3.select("#vises").append("div");
   div.append("div").classed("title",true).html("Box + Whiskers");
-  var svg = div.append("svg").attr("id","box");
+  var svg = div.append("svg").attr("id", "box");
 
   svg.append("rect")
-  .classed("left",true)
-  .attr("x",x(0.5))
-  .attr("y",y(0.75))
-  .attr("width",0)
-  .attr("height",y(0.5))
-  .style("fill","white")
-  .style("stroke",tableauGray)
-  .style("stroke-width",4);
+  .classed("left", true)
+  .attr("x", x(0.5))
+  .attr("y", y(0.75))
+  .attr("width", 0)
+  .attr("height", y(0.5))
+  .style("fill", "white")
+  .style("stroke", fillColor)
+  .style("stroke-width", 4);
 
   svg.append("rect")
-  .classed("right",true)
-  .attr("x",x(0.5))
-  .attr("y",y(0.75))
-  .attr("width",0)
-  .attr("height",y(0.5))
-  .style("fill","white")
-  .style("stroke",tableauGray)
-  .style("stroke-width",4);
+  .classed("right", true)
+  .attr("x", x(0.5))
+  .attr("y", y(0.75))
+  .attr("width", 0)
+  .attr("height", y(0.5))
+  .style("fill", "white")
+  .style("stroke", fillColor)
+  .style("stroke-width", 4);
 
   svg.append("line")
-  .classed("left",true)
-  .attr("x1",function(d){ return x(0.5);})
-  .attr("y1",function(d){ return y(0.5);})
-  .attr("x2",function(d){ return x(0.5);})
-  .attr("y2",function(d){ return y(0.5);})
-  .style("stroke",tableauGray)
-  .style("stroke-width",4);
+  .classed("left", true)
+  .attr("x1", x(0.5))
+  .attr("y1", y(0.5))
+  .attr("x2", x(0.5))
+  .attr("y2", y(0.5))
+  .style("stroke",fillColor)
+  .style("stroke-width", 4);
 
   svg.append("line")
-  .classed("right",true)
-  .attr("x1",x(0.5))
-  .attr("y1",y(0.5))
-  .attr("x2",x(0.5))
-  .attr("y2",y(0.5))
-  .style("stroke",tableauGray)
-  .style("stroke-width",4);
-}
+  .classed("right", true)
+  .attr("x1", x(0.5))
+  .attr("y1", y(0.5))
+  .attr("x2", x(0.5))
+  .attr("y2", y(0.5))
+  .style("stroke", fillColor)
+  .style("stroke-width", 4);
+
+};
 
 boxWhisker.update = function() {
-  if(distribution.length>0){
+  if(distribution.length > 0) {
     var qs = dl.quartile(distribution);
-    var iqr = qs[2]-qs[0];
+    var iqr = qs[2] - qs[0];
 
     var svg = d3.select("#box");
 
     svg.select("rect.left")
       .transition()
-      .attr("width",x(qs[1] - qs[0]))
-      .attr("x",x(qs[0]));
+      .attr("width", x(qs[1] - qs[0]))
+      .attr("x", x(qs[0]));
 
     svg.select("rect.right")
       .transition()
-      .attr("x",x(qs[1]))
-      .attr("width",x(qs[2] - qs[1]));
+      .attr("x", x(qs[1]))
+      .attr("width", x(qs[2] - qs[1]));
 
     svg.select("line.left")
       .transition()
-      .attr("x1",x(qs[0]-(1.5*iqr)))
-      .attr("x2",x(qs[0]));
+      .attr("x1", x(qs[0]-(1.5*iqr)))
+      .attr("x2", x(qs[0]));
 
     svg.select("line.right")
       .transition()
-      .attr("x1",x(qs[2]+(1.5*iqr)))
-      .attr("x2",x(qs[2]));
+      .attr("x1", x(qs[2]+(1.5*iqr)))
+      .attr("x2", x(qs[2]));
   }
-}
+};
 
 //Histogram
 var histogram = {};
 
 histogram.make = function(){
   var div = d3.select("#vises").append("div");
-  div.append("div").classed("title",true).html("Histogram");
-  var svg = div.append("svg").attr("id","histogram");
-}
+  div.append("div").classed("title", true).html("Histogram");
+  div.append("svg").attr("id", "histogram");
+};
 
 histogram.update = function(){
-  if(distribution.length>0){
-    var bins = dl.histogram(distribution,{step: 1/binEstimate(distribution)});
-    var by = d3.scaleLinear().domain([0,dl.max(bins,"count")]).range([height,4]);
+  if(distribution.length > 0){
+    var bins = dl.histogram(distribution, {step: 1 / binEstimate(distribution)});
+    var by = d3.scaleLinear().domain([0, dl.max(bins, "count")]).range([height, 4]);
 
-    svg = d3.select("#histogram");
-    var bars = svg.selectAll("rect").data(bins,d => d.value);
+    var svg = d3.select("#histogram");
+    var bars = svg.selectAll("rect").data(bins, d => d.value);
 
     bars.exit().remove();
 
     bars
     .transition()
-    .attr("x",d => Math.floor(x(d.value)))
-    .attr("y",d => by(d.count))
-    .attr("width",Math.ceil(x(bins.bins.step)))
-    .attr("height",d => height - by(d.count));
+    .attr("x", d => Math.floor(x(d.value)))
+    .attr("y", d => by(d.count))
+    .attr("width", Math.ceil(x(bins.bins.step)))
+    .attr("height", d => height - by(d.count));
 
     bars.enter().append("rect")
-    .attr("x",d => Math.floor(x(d.value)))
-    .attr("y",d => by(d.count))
-    .attr("width",Math.ceil(x(bins.bins.step)))
-    .attr("height",d => height - by(d.count))
-    .attr("fill",tableauGray);
+    .attr("x", d => Math.floor(x(d.value)))
+    .attr("y", d => by(d.count))
+    .attr("width", Math.ceil(x(bins.bins.step)))
+    .attr("height", d => height - by(d.count))
+    .attr("fill", fillColor);
 
   }
-}
+};
 
 //Density Chart aka Kernel Density Estimate
 var kdeChart = {};
 
-kdeChart.make = function(){
+kdeChart.make = function() {
   var div = d3.select("#vises").append("div");
   div.append("div").classed("title",true).html("Density Chart");
   var svg = div.append("svg").attr("id","density");
 
   svg.append("path")
-  .attr("stroke",tableauGray)
-  .attr("stroke-width",4)
-  .attr("fill","white")
-  .classed("density",true);
+  .attr("stroke", fillColor)
+  .attr("stroke-width", 4)
+  .attr("fill", "white")
+  .classed("density", true);
 
-}
+};
 
-kdeChart.update = function(){
-  if(distribution.length>0){
-    var xs = dl.range(0,1,epsilon);
+kdeChart.update = function() {
+  if(distribution.length>0) {
+    var xs = dl.range(0, 1, epsilon);
     var data = xs.map(d => ({"x": d, "y": density(d)}));
-    var by = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([height,4]);
+    var by = d3.scaleLinear().domain([0, dl.max(data,"y")]).range([height, 4]);
 
     var area = d3.area()
       .x(d => x(d.x))
@@ -325,45 +332,45 @@ kdeChart.update = function(){
     var svg = d3.select("#density");
     svg.select("path.density").datum(data)
       .transition()
-      .attr("d",area);
+      .attr("d", area);
   }
-}
+};
 
 //Strip Chart where each sample is represented by a tall rectangular mark.
 var stripChart = {};
 
-stripChart.make = function(){
+stripChart.make = function() {
   var div = d3.select("#vises").append("div");
   div.append("div").classed("title",true).html("Strip Chart");
-  var svg = div.append("svg").attr("id","strip");
-}
+  div.append("svg").attr("id", "strip");
+};
 
-stripChart.update = function(){
-  if(distribution.length>0){
-    var svg = d3.select("#strip");
+stripChart.update = function() {
+  if(distribution.length > 0){
+    let svg = d3.select("#strip");
     svg.selectAll("rect").data(distribution).enter().append("rect")
-      .attr("opacity",0.7)
-      .attr("fill",tableauGray)
-      .attr("width",4)
-      .attr("height",height)
-      .attr("y",0);
+      .attr("opacity", 0.7)
+      .attr("fill", fillColor)
+      .attr("width", 4)
+      .attr("height", height)
+      .attr("y", 0);
 
     svg.selectAll("rect")
       .attr("x",d => x(d));
   }
-}
+};
 
 //Beeswarm chart where each sample is a dot that uses some layout algorithm (in this case a force-directed layout) to cluster together such that no dots overlap, but the dots are as close to their intended x positions as possible.
 var beeswarm = {};
 
-beeswarm.make = function(){
+beeswarm.make = function() {
   var div = d3.select("#vises").append("div");
-  div.append("div").classed("title",true).html("Beeswarm Chart");
-  var svg = div.append("svg").attr("id","beeswarm");
-}
+  div.append("div").classed("title", true).html("Beeswarm Chart");
+  div.append("svg").attr("id", "beeswarm");
+};
 
-beeswarm.update = function(){
-  if(distribution.length>0){
+beeswarm.update = function() {
+  if(distribution.length > 0) {
     var markSize = parseInt(d3.select("#dotplot").select("circle").attr("r"));
     var data = distribution.map(d => ({"value": d}));
 
@@ -375,7 +382,7 @@ beeswarm.update = function(){
       .force("collide", d3.forceCollide(markSize+1))
       .stop();
 
-    for(var i = 0;i<120;i++){
+    for(var i = 0;i < 120;i++){
       simulation.tick();
     }
 
@@ -387,12 +394,12 @@ beeswarm.update = function(){
 
     svg.selectAll("circle")
       .transition()
-      .attr("cx",d => d.x)
-      .attr("cy",d => d.y)
-      .attr("r",markSize+"px")
-      .attr("fill",tableauGray);
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
+      .attr("r", markSize+"px")
+      .attr("fill", fillColor);
   }
-}
+};
 
 //A Wilkinson Dot plot where each sample is a circle that, if it would overplot another circle, is instead stacked on top of it.
 var dotplot = {};
@@ -400,8 +407,8 @@ var dotplot = {};
 dotplot.make = function(){
   var div = d3.select("#vises").append("div");
   div.append("div").classed("title",true).html("Dot Plot");
-  var svg = div.append("svg").attr("id","dotplot");
-}
+  div.append("svg").attr("id", "dotplot");
+};
 
 dotplot.update = function(){
   if(distribution.length>0){
@@ -440,15 +447,15 @@ dotplot.update = function(){
       .attr("cx",0)
       .attr("cy",d => height-((d.row)*(2*markSize)) + markSize)
       .attr("r",markSize+"px")
-      .attr("fill",tableauGray);
+      .attr("fill",fillColor);
 
     dots.enter().append("circle")
       .attr("cx",0)
       .attr("cy",d => height-((d.row)*(2*markSize)) + markSize)
       .attr("r",markSize+"px")
-      .attr("fill",tableauGray);
+      .attr("fill",fillColor);
   }
-}
+};
 
 //A gradient chart where we encode density from our KDE as color.
 var gradient = {};
@@ -468,8 +475,8 @@ gradient.make = function(){
     .attr("width",Math.ceil(cwidth))
     .attr("height",height)
     .attr("fill","white")
-    .attr("stroke-width",0);
-}
+    .attr("stroke-width", 0);
+};
 
 gradient.update = function(){
   if(distribution.length>0){
@@ -478,7 +485,7 @@ gradient.update = function(){
 
     var svg = d3.select("#gradient");
     var cwidth = (width/data.length);
-    var by = d3.scaleLinear().domain([0,dl.max(data,"y")]).range(["white",tableauGray]);
+    var by = d3.scaleLinear().domain([0,dl.max(data,"y")]).range(["white",fillColor]);
 
     svg.selectAll("rect").data(data);
 
@@ -488,7 +495,7 @@ gradient.update = function(){
       .transition()
       .attr("fill",d => by(d.y));
   }
-}
+};
 
 //A two-tone color chart aka a horizon chart.
 //Two ways of conceptualizing this one: either we have a banded color scheme where each x position has two colors, and the height of the second color is how far along the band that it is...
@@ -508,25 +515,25 @@ twoTone.make = function(){
 
   bins.append("rect")
     .datum(function(d){ return d;})
-    .attr("x",function(d,i){ return Math.floor(x(d.x));})
-    .attr("y",function(d){ return 0;})
-    .attr("width",function(d){ return Math.ceil(cwidth);})
-    .attr("height",function(d){ return height;})
-    .attr("fill","white")
-    .attr("stroke-width",0);
+    .attr("x", function(d){ return Math.floor(x(d.x));})
+    .attr("y", 0)
+    .attr("width", Math.ceil(cwidth))
+    .attr("height", height)
+    .attr("fill", "white")
+    .attr("stroke-width", 0);
 
   bins.append("rect")
     .datum(d => d)
-    .attr("x",d => Math.floor(x(d.x)))
-    .attr("y",0)
-    .attr("width",Math.ceil(cwidth))
-    .attr("height",0)
-    .attr("fill","white")
-    .attr("stroke-width",0);
-}
+    .attr("x", d => Math.floor(x(d.x)))
+    .attr("y", 0)
+    .attr("width", Math.ceil(cwidth))
+    .attr("height", 0)
+    .attr("fill", "white")
+    .attr("stroke-width", 0);
+};
 
-twoTone.update = function(){
-  if(distribution.length>0){
+twoTone.update = function() {
+  if(distribution.length > 0){
     var bands = 5;
 
     var xs = dl.range(0,1,epsilon);
@@ -535,43 +542,43 @@ twoTone.update = function(){
     var squash = d3.scaleLinear().domain([0,dl.max(data,"y")]);
     var quantize = d3.scaleQuantize().domain([0,1]).range(dl.range(0,bands,1));
     var hy = d3.scaleLinear().domain([0,1/bands]).range([0,1]);
-    var by = d3.scaleLinear().domain([0,1]).range(["white",tableauGray]);
+    var by = d3.scaleLinear().domain([0,1]).range(["white",fillColor]);
 
     var svg = d3.select("#twotone");
     var cwidth = (width/data.length);
 
-    var c1,c2,val,intVal,remain,h,topH,botH;
+    var c1, c2, val, intVal, remain, topH, botH;
 
-    svg.selectAll("g").data(data).each(function (d,i){
+    svg.selectAll("g").data(data).each(function (d) {
       val = squash(d.y);
       intVal = quantize(val)/bands;
       d3.select(this).selectAll("rect").datum(d);
       var top = d3.select(this.firstChild);
       var bottom = d3.select(this.lastChild);
 
-      remain = Math.max(val - intVal,0);
+      remain = Math.max(val - intVal, 0);
       c1 = by(intVal);
-      c2 = by(Math.min((quantize(val)+1),bands)/bands);
+      c2 = by(Math.min((quantize(val) + 1), bands) / bands);
 
-      topH = Math.round(height*hy(remain));
+      topH = Math.round(height * hy(remain));
       botH = height - topH;
 
       top
-        .attr("x",d => Math.floor(x(d.x)))
-        .attr("width",Math.ceil(cwidth))
-        .attr("y",botH)
-        .attr("height",topH)
-        .attr("fill",c2);
+        .attr("x", d => Math.floor(x(d.x)))
+        .attr("width", Math.ceil(cwidth))
+        .attr("y", botH)
+        .attr("height", topH)
+        .attr("fill", c2);
 
       bottom
-        .attr("x",d => Math.floor(x(d.x)))
-        .attr("width",Math.ceil(cwidth))
-        .attr("y",0)
-        .attr("height",botH)
-        .attr("fill",c1);
+        .attr("x", d => Math.floor(x(d.x)))
+        .attr("width", Math.ceil(cwidth))
+        .attr("y", 0)
+        .attr("height", botH)
+        .attr("fill", c1);
     });
   }
-}
+};
 
 //A dot for the mean, and error bars representing a 95% z-confidence interval of the mean.
 var meanError = {};
@@ -587,7 +594,7 @@ meanError.make = function(){
     .attr("x2",x(0.5))
     .attr("y1",y(0.5))
     .attr("y2",y(0.5))
-    .attr("stroke",tableauGray)
+    .attr("stroke",fillColor)
     .attr("stroke-width",4);
 
   svg.append("circle")
@@ -595,8 +602,8 @@ meanError.make = function(){
     .attr("cx",-10)
     .attr("cy",y(0.5))
     .attr("r",y(0.5)-y(0.6))
-    .attr("fill",tableauGray);
-}
+    .attr("fill",fillColor);
+};
 
 meanError.update = function(){
   if(distribution.length>0){
@@ -614,7 +621,7 @@ meanError.update = function(){
       .transition()
       .attr("cx",x(mean));
   }
-}
+};
 
 //A violin chart, which is a symmetric density plot with a box plot inside of it.
 var violin = {};
@@ -625,72 +632,72 @@ violin.make = function(){
   var svg = div.append("svg").attr("id","violin");
 
   svg.append("path")
-  .attr("fill",tableauGray)
-  .classed("top",true);
+  .attr("fill",fillColor)
+  .classed("top", true);
 
   svg.append("path")
-  .attr("fill",tableauGray)
-  .classed("bottom",true);
+  .attr("fill",fillColor)
+  .classed("bottom", true);
 
   svg.append("rect")
   .classed("left",true)
-  .attr("x",x(0.5))
-  .attr("y",y(0.5)-5)
+  .attr("x", x(0.5))
+  .attr("y", y(0.5)-5)
   .attr("width", 0)
   .attr("height", "10px")
   .style("fill","white")
-  .style("stroke",tableauGray)
-  .style("stroke-width",4);
+  .style("stroke", fillColor)
+  .style("stroke-width", 4);
 
   svg.append("rect")
-  .classed("right",true)
-  .attr("x",x(0.5))
-  .attr("y",y(0.5)-5)
+  .classed("right", true)
+  .attr("x", x(0.5))
+  .attr("y", y(0.5) - 5)
   .attr("width", 0)
   .attr("height", "10px")
-  .style("fill","white")
-  .style("stroke",tableauGray)
-  .style("stroke-width",4);
-}
+  .style("fill", "white")
+  .style("stroke", fillColor)
+  .style("stroke-width", 4);
+};
 
 violin.update = function(){
-  if(distribution.length>0){
-    var xs = dl.range(0,1,epsilon);
+  if(distribution.length > 0){
+    var xs = dl.range(0, 1, epsilon);
     var data = xs.map(d => ({"x": d, "y": density(d)}));
 
-    var Ty = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([height/2,4]);
+    var tY = d3.scaleLinear().domain([0, dl.max(data,"y")]).range([height / 2, 4]);
 
-    var TArea = d3.area()
+    var tArea = d3.area()
       .x(d => x(d.x))
-      .y1(d => Ty(d.y))
+      .y1(d => tY(d.y))
       .y0(height/2);
 
-    var By = d3.scaleLinear().domain([0,dl.max(data,"y")]).range([height/2,height-4]);
+    var bY = d3.scaleLinear().domain([0, dl.max(data,"y")]).range([height / 2, height - 4]);
 
-    var BArea = d3.area()
+    var bArea = d3.area()
       .x(d => x(d.x))
-      .y1(d => By(d.y))
+      .y1(d => bY(d.y))
       .y0(height/2);
 
     var svg = d3.select("#violin");
     svg.select("path.top").datum(data)
       .transition()
-      .attr("d",TArea);
+      .attr("d",tArea);
 
     svg.select("path.bottom").datum(data)
       .transition()
-      .attr("d",BArea);
+      .attr("d",bArea);
 
     var qs = dl.quartile(distribution);
 
     svg.select("rect.left")
       .transition()
-      .attr("width",x(qs[1] - qs[0]))
-      .attr("x",x(qs[0]));
+      .attr("width", x(qs[1] - qs[0]))
+      .attr("x", x(qs[0]));
 
     svg.select("rect.right")
       .transition()
-      .attr("x",x(qs[1]))
-      .attr("width",x(qs[2] - qs[1]));
+      .attr("x", x(qs[1]))
+      .attr("width", x(qs[2] - qs[1]));
   }
-}
+};
